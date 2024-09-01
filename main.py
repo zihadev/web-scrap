@@ -1,35 +1,21 @@
+# coding=utf-8
 import requests
 import selectorlib
 from selectorlib import Extractor
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+import time
 
-# URL = "http://programmer100.pythonanywhere.com/tours/"
-URL = "https://www.onet.pl/"
+URL = "http://programmer100.pythonanywhere.com/tours/"
 
 
 def scrape(url):
     """Scrapes source of url"""
     response = requests.get(url)
-    source1 = response.text
-    return source1
+    html_content = response.text  # Renamed to avoid potential shadowing
+    return html_content
 
 
-def scrape_js(url):
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    driver = webdriver.Chrome(options=chrome_options)
-    driver.get(url)
-    title = driver.title
-    source2 = driver.page_source
-    print('title: ', title)
-    print('source: \n', source2)
-    driver.quit()
-    return title, source2
-
-
-def yaml_timer(source):
-    """Scrapes the data from the scrapped url"""
+def extract_timer(html_source):
+    """Extracts the timer data from the HTML source"""
     extractor = Extractor.from_yaml_string("""
     timer:
        css: 'h1#displaytimer'
@@ -37,12 +23,30 @@ def yaml_timer(source):
        type: Text
     """)
 
-    data = extractor.extract(source)['timer']
-    return data
+    timer_data = extractor.extract(html_source)[
+        'timer']  # Used a more specific name
+    return timer_data
+
+
+def saving_data(data):
+    # Get the current local time
+    current_time = time.localtime()
+
+    # Format the time to show date and hour
+    formatted_time = time.strftime("%Y-%m-%d %H:%M:%S", current_time)
+    with open("concerts.txt", "r") as file:
+        notes = file.read()
+    with open("concerts.txt", "a") as file:
+        if data in notes:
+
+            print("already is")
+        else:
+            file.write(f"{data}  -- [checked and saved: {formatted_time}]\n")
 
 
 if __name__ == "__main__":
-    source = (scrape(URL))
-    print(yaml_timer(source))
-    print(5 * '*')
-    print(scrape_js(URL))
+    scraped_content = scrape(
+        URL)  # Renamed to avoid shadowing with any outer scope
+    result = extract_timer(scraped_content)
+    saving_data(result)
+    print(result)
